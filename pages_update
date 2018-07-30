@@ -1,0 +1,20 @@
+def bash():
+    # text1 = font.render('TERMINAL UNDER CONSTRUCTION', True, (0, 220, 0))
+    # screen.blit(text1, (screen_width / 32, 150))
+    data = os.environ
+
+    text1 = font.render('Homedrive', True, (0, 220, 0))
+    screen.blit(text1, (screen_width / 16, 150))
+    text2 = font.render('Homepath', True, (0, 220, 0))
+    screen.blit(text2, (screen_width, 150))
+
+
+    x = 170
+    for key in data:
+        key = str(key)
+        data[key] = str(data[key])
+        text1 = font.render(key, True, (0, 220, 0))
+        screen.blit(text1, (screen_width / 16, x))
+        text2 = font.render(data[key], True, (0, 220, 0))
+        screen.blit(text2, (screen_width, x))
+        x+=20
