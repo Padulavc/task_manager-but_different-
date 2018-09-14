@@ -81,9 +81,17 @@ def index():
         # if pos == (icon['rect'][0], 50):
         #     screen.blit(icon['focus'], (icon['rect'][0], 50))
 
+def redraw(actual_function=None):
+    screen.fill((0, 0, 0))
+    screen.blit(background, (0, 0))
+    index()
+    if actual_function:
+        actual_function()
+
 if __name__ == '__main__':
 
     index()
+    actual_function = None
     while not end:
         ### MAIN ###
         pos = pygame.mouse.get_pos()
@@ -93,17 +101,13 @@ if __name__ == '__main__':
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for icon in icons:
                     if icon['rect'].collidepoint(pos):
-                        screen.fill((0, 0, 0))
-                        screen.blit(background, (0, 0))
-                        index()
-                        icon['page']()
+                        actual_function = icon['page']
+                        redraw(actual_function)
             if event.type == pygame.KEYDOWN:
-                print(event.key)
                 if event.key == 27:
-                    screen.fill((0, 0, 0))
-                    screen.blit(background, (0, 0))
-                    index()
+                    redraw(actual_function)
         pygame.display.update()
+        redraw(actual_function)
         clock.tick(60)
     pygame.display.quit()
 
