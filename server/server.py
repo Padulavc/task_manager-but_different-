@@ -2,15 +2,18 @@ import platform
 from cpuinfo import get_cpu_info
 from psutil import virtual_memory, swap_memory, cpu_count, cpu_freq, disk_usage, disk_partitions, users, net_if_addrs
 from math import pow
+from socket import *
+from pickle import dumps
+
 #####################################################################
 #                                                                   #
 #    SETUP: ajustements to the socket conneciton                    #
 #                                                                   #
 #####################################################################
 
-#gateway = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#host = socket.gethostname()
-#gateway.bind((host, 1312))
+gateway = socket(AF_INET, SOCK_DGRAM)
+host = gethostbyname()
+gateway.bind((host, 1312))
 
 #####################################################################
 #                                                                   #
@@ -124,7 +127,7 @@ class struct:
             'partitions': partitions
         }
 
-        return(disk_data)
+        return disk_data
 
     def system(self):
         """
@@ -175,15 +178,25 @@ data = struct()
 # print('DISK DATA %s' % disk)
 # os = data.system()
 # print('OS DATA %s' % os)
-net = data.network()
-for item in net:
-    """
-        get inferface
-    """
-    print('     -i ',item)
-    for info in net[item]:
-        """
-            get data from the interface    
-        """
-        for af in info:
-            print(af)
+# net = data.network()
+# for item in net:
+#     """
+#         get inferface
+#     """
+#     print('     -i ',item)
+#     for info in net[item]:
+#         """
+#             get data from the interface
+#         """
+#         print(info)
+#         for i in info:
+#             print(i)
+while True:
+    data = struct()
+    (sign, client) = gateway.recvfrom(2048)
+    sign = sign.decode('acii')
+
+    if sign == 'memory':
+        mem = data.memory()
+        sign = dumps(mem)
+

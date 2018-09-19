@@ -1,7 +1,9 @@
-import psutil
-import platform
-import cpuinfo
+from pickle import load
+import socket
 import pygame
+from threading import Thread
+gateway = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+host = socket.gethostname()
 
 screen_width = 600
 screen_height = 800
@@ -10,53 +12,55 @@ pygame.font.init()
 font = pygame.font.SysFont('DS-DIGI.TFF', 24, False, False)
 
 
-def use_bar(total, text, height):
+def getanswer(request):
+    gateway.sendto(request.encode('ascii'), (host, 1312))
+    (answer, server) = gateway.recvfrom(2048)
+    answer = load(answer)
+    answer = answer.decode('ascii')
+    return answer
+
+def use_bar(percent, text, height):
     pygame.font.init()
-    width = screen_width - 40
-    pygame.draw.rect(screen, (0, 20, 0), (20, height, width, 40))
-    width = width * total / 100
-    pygame.draw.rect(screen, (0, 220, 0), (20, height, width, 40))
+    width = screen_width
+    percent_bar = width*(percent/100)
+    """barra da base"""
+    pygame.draw.rect(screen, (148, 0, 211), (20, height, screen_width, 40))
+    """barra de uso"""
+    pygame.draw.rect(screen, (0, 220, 0), (20, height, percent_bar, 40))
     text = font.render(text, False, (0, 220, 0))
     screen.blit(text, (20, (height - 20)))
 
-
 def memory():
-    mem = psutil.virtual_memory()
-    mem_total_human = round(mem.total / (1024 * 1024 * 1024), 2)
-    swap = psutil.swap_memory()
-    swaptext = 'Memory swap: %s bytes' % str(swap[1])
-    text = 'Total Memory : %s  GB' % str(mem_total_human)
-    mem_using = mem.used
-    text1 = font.render('Total Memory:', True, (0, 220, 0))
-    screen.blit(text1, (screen_width / 32, 150))
-    text2 = font.render('Used Memory:', True, (0, 220, 0))
-    screen.blit(text2, (screen_width / 32, 170))
-    text3 = font.render(swaptext, True, (0, 220, 0))
-    screen.blit(text3, (screen_width / 32, 250))
-    use_bar(mem_using, text, 300)
+    answer = Thread(target=getanswer('memory'))
+    answer.start()
+    print(answer)
 
+    text1 = font.render('Total Memory: %s' % answer[total_memory_GB], True, (148,0,211))
+    screen.blit(text1, (screen_width / 32, 150))
+
+    text2 = font.render('Used Memory: %s' % answer[used_memory_GB], True, (148,0,211))
+    screen.blit(text2, (screen_width / 32, 200))
+
+    text3 = font.render('Free Memory: %s' % answer[free_memory_GB], True, (148, 0, 211))
+    screen.blit(text3, (screen_width / 32, 250))
+
+    text4 = font.render('Total Swap: %s' % answer[total_swap_GB], True, (148,0,211))
+    screen.blit(text4, ((2*screen_width) / 3, 150))
+
+    text5 = font.render('Used Swap: %s' % answer[used_swap_KB], True, (148,0,211))
+    screen.blit(text5, ((2*screen_width) / 3, 200))
+
+    text6 = font.render('Free Swap: %s' % answer[free_swap_GB], True, (148, 0, 211))
+    screen.blit(text6, ( (2*screen_width) / 3, 250))
+
+
+    memory_percent = (total_memory_GB/used_memory_GB)/100
+    swap_percent = (total_swap_GB/used_swap_KB)/100
+    use_bar(memory_percent, 'Memory use', 300)
+    use_bar(swap_percent, 'Swap use', 400)
 
 def cpu():
-    info_cpu = cpuinfo.get_cpu_info()
-    brand = info_cpu['brand']
-    word = str(info_cpu['bits'])
-    cores_all = psutil.cpu_count()
-    cores_physical = psutil.cpu_count(logical=False)
-    cores_logical = cores_all - cores_physical
-    cores_all = str(cores_all)
-    cores_logical = str(cores_logical)
-    cores_physical = str(cores_physical)
-    freq = psutil.cpu_freq()
-    freq_str = str(freq)
-    freq_current = psutil.cpu_freq().current
-    arch = info_cpu['arch']
-    cpu_use = psutil.cpu_percent()
-    text1 = font.render('Brand:', True, (0, 220, 0))
-    text2 = font.render('Architecture:', True, (0, 220, 0))
-    text3 = font.render('CPU word:', True, (0, 220, 0))
-    text4 = font.render('Cores:', True, (0, 220, 0))
-    text5 = font.render('Cores(logical):', True, (0, 220, 0))
-    text6 = font.render('Frequency:', True, (0, 220, 0))
+
     info1 = font.render(brand, False, (0, 220, 0))
     info2 = font.render(arch, False, (0, 220, 0))
     info3 = font.render(word, False, (0, 220, 0))
@@ -77,15 +81,33 @@ def cpu():
     screen.blit(info6, (screen_width / 4, 250))
     use_bar(cpu_use, 'total CPU use', 300)
 
+    ### use per cpu --------------------------------------------
+
+    c = psutil.cpu_percent(interval=1, percpu=True)
+    y = 370
+    k = 1
+    for i in c:
+        use_bar(i, 'Core use: ', y)
+        y += 70
+        k += 1
 
 def disk():
-    disk = psutil.disk_usage('.')
-    disk_total = str(round(disk.total / (1024 * 1024 * 1024), 2))
-    disk_use = str(round(disk.used / (1024 * 1024 * 1024), 2))
-    disk_free = str(round(disk.free / (1024 * 1024 * 1024), 2))
-    text1 = font.render('Total Disk space:', True, (0, 220, 0))
-    text2 = font.render('Disk using:', True, (0, 220, 0))
-    text3 = font.render('Free space:', True, (0, 220, 0))
+
+    """
+            FUNÇÃO PARA VARRER CADA PARTIÇÃO
+
+            for item in partitions:
+            print('      PARTITION: ' )
+            for info in item:
+                print(info)
+
+    """
+
+
+
+    text1 = font.render('Total space:', True, (148,0,211))
+    text2 = font.render('Disk using:', True, (148,0,211))
+    text3 = font.render('Free space:', True, (148,0,211))
     text4 = font.render(disk_total, True, (0, 220, 0))
     text5 = font.render(disk_use, True, (0, 220, 0))
     text6 = font.render(disk_free, True, (0, 220, 0))
@@ -95,6 +117,11 @@ def disk():
     screen.blit(text4, (screen_width / 4, 150))
     screen.blit(text5, (screen_width / 4, 170))
     screen.blit(text6, (screen_width / 4, 190))
+    text7 = font.render('Disk partitions: ', True, (0, 220, 0))
+    screen.blit(text7, (screen_width / 32, 210))
+    x = 210
+
+    use_bar(disk.total, 'Disk Use', x)
 
 
 def overview():
@@ -103,22 +130,6 @@ def overview():
 
 
 def system():
-    user = psutil.users()
-    text = user[0][0]
-
-    ## GENERIC OS
-    name = '%s , %s' % (text, platform.node())
-    system = 'System : %s' % (platform.system())
-    version = 'Version : %s' % platform.version()
-    release = 'Release: %s' % (platform.release())
-
-    ## LINUX
-
-    dist = platform.dist()
-    distro = 'Distro: %s' % dist[0]
-    id = 'ID: %s' % dist[1]
-    sup = 'Suported distros: %s ' % dist[2]
-
     name_text = font.render(name, True, (0, 220, 0))
     system_text = font.render(system, True, (0, 220, 0))
     version_text = font.render(version, True, (0, 220, 0))
@@ -138,14 +149,58 @@ def system():
 
 
 def network():
-    text1 = font.render('NETWORK PAGE UNDER CONSTRUCTION', True, (0, 220, 0))
-    screen.blit(text1, (screen_width / 32, 150))
 
+    passage =  psutil.net_io_counters(pernic=False, nowrap=True)
+    sent = str(round(passage[0]/ (1024 * 1024),3))
+    recieved = str(round(passage[1]// (1024 * 1024),3))
+    packout = str(int(passage[2]/1000))
+    packin = str(int(passage[3]/1000))
+
+    adress = psutil.net_if_addrs()
+    x = 20
+    subx = 20
+    for key in adress:
+        text1 = font.render(key, True, (148, 0, 211))
+        screen.blit(text1, (x, 150))
+        x += screen_width/3
+        for k2 in adress[key]:
+            t0 = 'Family: %s ' % k2[0]
+            text0 = font.render(t0, False, (0, 220, 0))
+            screen.blit(text1, (subx, 170))
+
+            t1 = 'IP adress: %s ' % k2[1]
+            text1 = font.render(t1, False, (0, 220, 0))
+            screen.blit(text1, (subx, 190))
+
+            t2 = 'Netmask: %s ' % k2[2]
+            text2 = font.render(t2, False, (0, 220, 0))
+            screen.blit(text2, (subx, 210))
+
+            t3 = 'Broadcast: %s ' % k2[3]
+            text3 = font.render(t3, False, (0, 220, 0))
+            screen.blit(text3, (subx, 230))
+
+            t4 = 'peer to peer: %s ' % k2[4]
+            text4 = font.render(t4, False, (0, 220, 0))
+            screen.blit(text4, (subx, 250))
+
+            subx += screen_width/3
 
 def bash():
-    text1 = font.render('TERMINAL UNDER CONSTRUCTION', True, (0, 220, 0))
-    screen.blit(text1, (screen_width / 32, 150))
+    # data = os.environ
+    # text1 = font.render('Homedrive', True, (148, 0, 211))
+    # screen.blit(text1, (screen_width / 16, 150))
+    # text2 = font.render('Homepath', True, (148, 0, 211))
+    # screen.blit(text2, (screen_width/2, 150))
+    #
+    # x = 170
+    # for key in data:
+    #     key = str(key)
+    #     data[key] = str(data[key])
+    #     text1 = font.render(key, True, (0, 220, 0))
+    #     screen.blit(text1, (screen_width/16, x))
+    #     text2 = font.render(data[key], True, (0, 220, 0))
+    #     screen.blit(text2, (screen_width/2, x))
+    #     x += 20
 
-# def invader():
-#     text1 = font.render('COMING SOON...', True, (0, 220, 0))
-#     screen.blit(text1, (screen_width / 32, 150))
+    screen.blit('page under construction', (screen_width / 16, 150))

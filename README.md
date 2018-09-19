@@ -25,9 +25,12 @@ Para a execução do projeto, você poderá optar por opções:
 * Makefile
 * Run.sh
 
-caso opte pelo _Makefile_, execute apenas ```$make```
+#####Opção  _Makefile_
 
-caso opte pela opção _run.sh_, talavez o arquivo peça permissão de execução.
+execute apenas ```$make```
+
+#####Opção _run.sh_
+ Talavez o arquivo peça permissão de execução.
  Neste caso, execute
  ```
  $chmod +X run.sh | ./run.sh
