@@ -13,7 +13,7 @@ class start():
         self.screen = display.set_mode((screen_height, screen_width))
         self.clock = time.Clock()
         self.icons = {}
-
+        self.background = image.load("icons/background.jpg").convert_alpha()
     def load_var(self):
         init()
         display.init()
@@ -27,10 +27,11 @@ class start():
                     {'func':bash,'image':'bash'},
                     {'func':SpaceInvaders,'image':'SpaceInvaders'}]
         for item in self.icons:
-           item['image'] = image.load("icons/{}.png".format(item['image'])).convert_alpha()\
+           item['image'] = image.load("icons/{}.png".format(item['image'])).convert_alpha()
            item['image'] = transform.scale(item['image'],(60, 60))
 
     def index(self):
+        screen.blit(self.background, (0, 0))
         x = 75
         for icon in self.icons:
             screen.blit(icon['image'], (x, 50))
@@ -38,8 +39,7 @@ class start():
             x += 85
 
     def redraw(self, actual_function=None):
-        background = image.load("icons/background.jpg").convert_alpha()
-        screen.blit(background, (0, 0))
+        screen.blit(self.background, (0, 0))
         screen.fill((0, 0, 0))
         self.index()
         if actual_function:
@@ -51,22 +51,23 @@ class start():
         actual_function = None
         end = False
         while not end:
+            self.redraw(actual_function)
             pos = mouse.get_pos()
-            for event in event.get():
+            for event in pygame.event.get():
                 if event.type == QUIT:
                     end = True
                     break
                 if event.type == MOUSEBUTTONDOWN and event.button == 1:
-                    for icon in icons:
-                        if icon['rect'].collidepoint(pos):
-                            actual_function = icon['page']
+                    for icon in self.icons:
+                        if icon['Rect'].collidepoint(pos):
+                            actual_function = icon['func']
                             self.redraw(actual_function)
                 if event.type == KEYDOWN:
                     if event.key == 27:
                         self.redraw(actual_function)
             display.update()
             self.redraw(actual_function)
-            clock.tick(60)
+            self.clock.tick(60)
         display.quit()
 
 if __name__ == '__main__':
